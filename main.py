@@ -3,6 +3,27 @@ from bs4 import BeautifulSoup
 
 
 MAIN_URL = 'https://www.imdb.com/title/'
+FILENAME = 'movies.txt'
+
+
+class Movie:
+	def __init__(self):
+		self.title = ''
+		self.director = ''
+
+	def setTitle(self, title):
+		self.title = title
+
+	def setDirector(self, director):
+		self.director = director
+
+	def setAll(self, title, director):
+		self.title = title
+		self.director = director
+
+	def getAllInfo(self):
+		return self.title+','+self.director+'\n'
+
 
 def getPageContent(url):
 	r = requests.get(url)
@@ -12,13 +33,21 @@ def getPageContent(url):
 	return r.text
 
 def getMovieName(content):
-    soup = BeautifulSoup(content, 'html.parser')
-    AllH1 = soup.find_all('h1')
-    title = [x for x in AllH1 if 'itemprop="name"' in str(x)]
-    title = str(title[0])
-    title = title.split(">")
-    title = title[1].split("<")[0]
-    return title
+	soup = BeautifulSoup(content, 'html.parser')
+	AllH1 = soup.find_all('h1')
+	title = [x for x in AllH1 if 'itemprop="name"' in str(x)]
+	title = str(title[0])
+	title = title.split(">")
+	title = title[1].split("<")[0]
+	return title
+
+def getDirectorName(content):
+	soup = BeautifulSoup(content, 'html.parser')
+	AllSpans = soup.find_all('span')
+	director = [x for x in AllSpans if 'itemprop="director"' in str(x)]
+	director = str(director[0]).split(">")[-4]
+	director = director.split("<")[0]
+	return director
 
 def changeMovieURL(count, startString):
 	if count<10:
@@ -36,8 +65,14 @@ def changeMovieURL(count, startString):
 	if count>=1000000 and count<10000000:
 		return startString+str(count)
 
+
+def writeResultsToFile(item):
+	thefile = open(FILENAME, 'a')
+	thefile.write(item)
+	thefile.close()
+
 if __name__ == '__main__':
-	names = []
+	movies = []
 	content = 0
 	count = 1
 
@@ -45,8 +80,15 @@ if __name__ == '__main__':
 		thisMovieUrl = changeMovieURL(count, 'tt')
 		content = getPageContent(MAIN_URL+thisMovieUrl+'/')
 		if not content==-1:
-			names.append(getMovieName(content))
-			print(names[-1])
+			title = getMovieName(content)
+			director = getDirectorName(content)
+			thisMovie = Movie()
+			thisMovie.setAll(title, director)
+			movies.append(thisMovie)
+			print(movies[-1].getAllInfo())
+			writeResultsToFile(movies[-1].getAllInfo())
 		count += 1
+
+	
 
 
