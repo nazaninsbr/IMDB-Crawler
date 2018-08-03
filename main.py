@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup 
-
+import matplotlib.pyplot as plt
 
 MAIN_URL = 'https://www.imdb.com/title/'
 FILENAME = 'movies.txt'
@@ -22,7 +22,10 @@ class Movie:
 		self.director = director
 
 	def getAllInfo(self):
-		return self.title+','+self.director+'\n'
+		return self.title+'#'+self.director+'\n'
+
+	def getDirector(self):
+		return self.director
 
 
 def getPageContent(url):
@@ -45,6 +48,8 @@ def getDirectorName(content):
 	soup = BeautifulSoup(content, 'html.parser')
 	AllSpans = soup.find_all('span')
 	director = [x for x in AllSpans if 'itemprop="director"' in str(x)]
+	if len(director)==0:
+		return ''
 	director = str(director[0]).split(">")[-4]
 	director = director.split("<")[0]
 	return director
@@ -71,12 +76,13 @@ def writeResultsToFile(item):
 	thefile.write(item)
 	thefile.close()
 
-if __name__ == '__main__':
+def crawlTheWebsite():
 	movies = []
 	content = 0
 	count = 1
 
-	while not content==-1:
+	while count<1000:
+		print("Crawling...")
 		thisMovieUrl = changeMovieURL(count, 'tt')
 		content = getPageContent(MAIN_URL+thisMovieUrl+'/')
 		if not content==-1:
@@ -85,10 +91,52 @@ if __name__ == '__main__':
 			thisMovie = Movie()
 			thisMovie.setAll(title, director)
 			movies.append(thisMovie)
-			print(movies[-1].getAllInfo())
 			writeResultsToFile(movies[-1].getAllInfo())
 		count += 1
+	return movies
 
+
+def readTheFile():
+	movies = []
+	thefile = open(FILENAME, 'r')
+	content = thefile.readlines()
+	thefile.close()
+	for item in content:
+		x = item.strip()
+		x = x.split("#")
+		y = Movie()
+		y.setAll(x[0], x[-1])
+		movies.append(y)
+	return movies
+
+def drawBarChart(numOfMovies):
+	x = []
+	y = []
+	for item in numOfMovies.keys():
+		x.append(item)
+		y.append(numOfMovies[item])
+	plt.bar(x, y)
+	plt.savefig("number_of_movies_for_each_director.pdf")
+	plt.show()
+
+def numberOfMoviesByADirector(movies):
+	numOfMovies = {}
+	for movie in movies:
+		director = movie.getDirector()
+		if director in numOfMovies.keys():
+			numOfMovies[director] += 1
+		else:
+			numOfMovies[director] = 1
+	drawBarChart(numOfMovies)
+		
+
+if __name__ == '__main__':
+	choice = input("1. crawl the website 2. use the file (1/2) ")
+	if choice=='1':
+		movies = crawlTheWebsite()
+	elif choice=='2':
+		movies = readTheFile()
+	numberOfMoviesByADirector(movies)
 	
 
 
