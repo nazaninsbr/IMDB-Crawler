@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
-import requests
-from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
 import copy
+from sys import stderr
+
+import requests
+import matplotlib.pyplot as plt
 import networkx as nx
+from bs4 import BeautifulSoup
 
 
 MAIN_URL = 'https://www.imdb.com/title/'
-FILENAME = 'movies.txt'
+MOVIES_LIST_PATH = 'movies.txt'
+BAR_CHART_PATH = 'number_of_movies_for_each_director.pdf'
+ACTORS_GRAPH_PATH = 'actors_graph.pdf'
+
 MAX_MOVIE_COUNT = 100
 MAX_UNAVAILABLE_COUNT = 20
 
@@ -47,57 +52,56 @@ class Movie:
 
 class ActorsGraph:
     def __init__(self):
-        self.G = nx.Graph()
+        self.graph = nx.Graph()
 
-    def add_edge(self, actors):
+    def add_edges(self, actors):
         if len(actors) <= 1:
             for actor in actors:
-                if actor not in self.G:
-                    self.G.add_node(actor)
+                if actor not in self.graph:
+                    self.graph.add_node(actor)
             return
         for actor1 in actors:
             for actor2 in actors:
                 if not(actor1 == actor2):
-                    if actor1 not in self.G:
-                        self.G.add_node(actor1)
-                    if actor2 not in self.G:
-                        self.G.add_node(actor2)
-                    if self.nodes_connected(actor1, actor2):
-                        self.G[actor1][actor2]['weight'] += 1
+                    if actor1 not in self.graph:
+                        self.graph.add_node(actor1)
+                    if actor2 not in self.graph:
+                        self.graph.add_node(actor2)
+                    if self.is_connected(actor1, actor2):
+                        self.graph[actor1][actor2]['weight'] += 1
                     else:
-                        self.G.add_edge(actor1, actor2, weight=1)
+                        self.graph.add_edge(actor1, actor2, weight=1)
 
-    def nodes_connected(self, u, v):
-        return u in self.G.neighbors(v)
+    def is_connected(self, u, v):
+        return u in self.graph.neighbors(v)
 
-    def print_graph(self):
-        elarge = [(u, v) for (u, v, d) in self.G.edges(data=True) if d['weight'] > 2]
-        esmall = [(u, v) for (u, v, d) in self.G.edges(data=True) if d['weight'] <= 2]
+    def print_graph(self, path):
+        elarge = [(u, v) for (u, v, d) in self.graph.edges(data=True) if d['weight'] > 2]
+        esmall = [(u, v) for (u, v, d) in self.graph.edges(data=True) if d['weight'] <= 2]
 
-        pos = nx.spring_layout(self.G)  # positions for all nodes
+        pos = nx.spring_layout(self.graph)  # positions for all nodes
 
         # nodes
-        nx.draw_networkx_nodes(self.G, pos, node_size=400)
+        nx.draw_networkx_nodes(self.graph, pos, node_size=400)
 
         # edges
-        nx.draw_networkx_edges(self.G, pos, edgelist=elarge, width=3)
-        nx.draw_networkx_edges(self.G, pos, edgelist=esmall, width=1, alpha=0.5, edge_color='b', style='dashed')
-        labels = nx.get_edge_attributes(self.G, 'weight')
-        edge_labels = dict([((u, v, ), d['weight']) for u, v, d in self.G.edges(data=True)])
-        nx.draw_networkx_edge_labels(self.G, pos, edge_labels=edge_labels)
+        nx.draw_networkx_edges(self.graph, pos, edgelist=elarge, width=3)
+        nx.draw_networkx_edges(self.graph, pos, edgelist=esmall, width=1, alpha=0.5, edge_color='b', style='dashed')
+        labels = nx.get_edge_attributes(self.graph, 'weight')
+        edge_labels = dict([((u, v), d['weight']) for u, v, d in self.graph.edges(data=True)])
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
         # labels
-        nx.draw_networkx_labels(self.G, pos, font_size=8, font_family='sans-serif')
+        nx.draw_networkx_labels(self.graph, pos, font_size=8, font_family='sans-serif')
 
         plt.axis('off')
-        plt.savefig('actors_graph.pdf')  # save as pdf
+        plt.savefig(path)  # save as pdf
         plt.show()  # display
 
 
 def get_page_content(url):
     r = requests.get(url)
     if not r.status_code == 200:
-        print('Problem accessing page data.')
-        return -1
+        raise RuntimeError('Problem accessing page data.')
     return r.text
 
 
@@ -122,25 +126,25 @@ def get_director_name(content):
     return director
 
 
-def change_movie_url(count, start_string):
+def change_movie_url(count, prefix):
     if count < 10:
-        return start_string + '000000' + str(count)
+        return prefix + '000000' + str(count)
     if count >= 10 and count < 100:
-        return start_string + '00000' + str(count)
+        return prefix + '00000' + str(count)
     if count >= 100 and count < 1000:
-        return start_string + '0000' + str(count)
+        return prefix + '0000' + str(count)
     if count >= 1000 and count < 10000:
-        return start_string + '000' + str(count)
+        return prefix + '000' + str(count)
     if count >= 10000 and count < 100000:
-        return start_string + '00' + str(count)
+        return prefix + '00' + str(count)
     if count >= 100000 and count < 1000000:
-        return start_string + '0' + str(count)
+        return prefix + '0' + str(count)
     if count >= 1000000 and count < 10000000:
-        return start_string + str(count)
+        return prefix + str(count)
 
 
 def write_results_to_file(item):
-    thefile = open(FILENAME, 'a')
+    thefile = open(MOVIES_LIST_PATH, 'a')
     thefile.write(item)
     thefile.close()
 
@@ -159,35 +163,34 @@ def get_movie_actors(content):
 
 def crawl_the_website():
     movies = []
-    content = 0
     count = 0
-    actor_graph = ActorsGraph()
+    actors_graph = ActorsGraph()
     count_not_found = 0
     while count < MAX_MOVIE_COUNT and count_not_found < MAX_UNAVAILABLE_COUNT:
         count += 1
-        print('Crawling...' + count)
+        print('Crawling...' + str(count), file=stderr)
         this_movie_url = change_movie_url(count, 'tt')
-        content = get_page_content(MAIN_URL + this_movie_url + '/')
-        if not content == -1:
+        try:
+            content = get_page_content(MAIN_URL + this_movie_url + '/')
             count_not_found = 0
             title = get_movie_name(content)
             director = get_director_name(content)
             actors = get_movie_actors(content)
-            actor_graph.add_edge(actors)
+            actors_graph.add_edges(actors)
             this_movie = Movie()
             this_movie.set_all(title, director)
             this_movie.set_actors(actors)
             movies.append(this_movie)
             write_results_to_file(movies[-1].get_all_info())
-        else:
-            count('Movie not found.')
+        except RuntimeError:
+            print('Movie not found.', file=stderr)
             count_not_found += 1
-    return movies, actor_graph
+    return movies, actors_graph
 
 
-def read_the_file():
+def read_movies_list_file(path):
     movies = []
-    thefile = open(FILENAME, 'r')
+    thefile = open(path, 'r')
     content = thefile.readlines()
     thefile.close()
     for item in content:
@@ -199,7 +202,7 @@ def read_the_file():
     return movies
 
 
-def draw_bar_chart(num_of_movies):
+def draw_bar_chart(num_of_movies, path):
     x = []
     y = []
     for item in num_of_movies.keys():
@@ -208,11 +211,11 @@ def draw_bar_chart(num_of_movies):
         x.append(item)
         y.append(num_of_movies[item])
     plt.bar(x, y)
-    plt.savefig('number_of_movies_for_each_director.pdf')
+    plt.savefig(path)
     plt.show()
 
 
-def number_of_movies_by_a_director(movies):
+def count_movies_by_a_director(movies):
     num_of_movies = {}
     for movie in movies:
         director = movie.get_director()
@@ -220,14 +223,14 @@ def number_of_movies_by_a_director(movies):
             num_of_movies[director] += 1
         else:
             num_of_movies[director] = 1
-    draw_bar_chart(num_of_movies)
+    return num_of_movies
 
 
 if __name__ == '__main__':
     choice = input('1. crawl the website 2. use the file (1/2) ')
     if choice == '1':
-        movies, actor_graph = crawl_the_website()
-        actor_graph.print_graph()
+        movies, actors_graph = crawl_the_website()
+        actors_graph.print_graph(ACTORS_GRAPH_PATH)
     elif choice == '2':
-        movies = read_the_file()
-    number_of_movies_by_a_director(movies)
+        movies = read_movies_list_file(MOVIES_LIST_PATH)
+    draw_bar_chart(count_movies_by_a_director(movies), BAR_CHART_PATH)
