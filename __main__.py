@@ -12,15 +12,10 @@ ACTORS_GRAPH_PATH = 'actors_graph.pdf'
 
 def read_movies_list_file(path):
     movies = []
-    thefile = open(path, 'r')
-    content = thefile.readlines()
-    thefile.close()
+    with open(path, 'r') as f:
+        content = f.readlines()
     for item in content:
-        x = item.strip()
-        x = x.split('#')
-        y = Movie()
-        y.set_all(x[0], x[-1])
-        movies.append(y)
+        movies.append(Movie.parse(item))
     return movies
 
 
@@ -40,7 +35,7 @@ def draw_bar_chart(num_of_movies, path):
 def count_movies_by_a_director(movies):
     num_of_movies = {}
     for movie in movies:
-        director = movie.get_director()
+        director = movie.director
         if director in num_of_movies.keys():
             num_of_movies[director] += 1
         else:

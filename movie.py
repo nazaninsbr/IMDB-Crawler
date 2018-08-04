@@ -4,32 +4,23 @@ import copy
 
 
 class Movie:
-    def __init__(self):
-        self.title = ''
-        self.director = ''
-        self.actors = []
-
-    def set_title(self, title):
-        self.title = title
-
-    def set_director(self, director):
-        self.director = director
-
-    def set_all(self, title, director):
+    def __init__(self, title='', director='', actors=[]):
         self.title = title
         self.director = director
+        self.actors = actors
 
-    def get_all_info(self):
+    def __str__(self):
         return self.title + '#' + self.director + '\n'
 
-    def get_director(self):
-        return self.director
+    @property
+    def actors(self):
+        return self._actors
 
-    def get_title(self):
-        return self.title
+    @actors.setter
+    def actors(self, actors):
+        self._actors = copy.deepcopy(actors)
 
-    def get_actors(self):
-        return self.actors
-
-    def set_actors(self, actors):
-        self.actors = copy.deepcopy(actors)
+    @classmethod
+    def parse(cls, string):
+        parsed = string.strip().split('#')
+        return Movie(parsed[0], parsed[1])
