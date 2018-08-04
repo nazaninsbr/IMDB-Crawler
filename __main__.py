@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from sys import argv
+
 import matplotlib.pyplot as plt
 
 from movie import Movie
@@ -43,11 +45,20 @@ def count_movies_by_a_director(movies):
     return num_of_movies
 
 
-if __name__ == '__main__':
-    choice = input('1. crawl the website 2. use the file (1/2) ')
-    if choice == '1':
+def main():
+    if '--crawl' in argv:
         movies, actors_graph = Crawler(MOVIES_LIST_PATH).crawl_the_website()
         actors_graph.print_graph(ACTORS_GRAPH_PATH)
-    elif choice == '2':
-        movies = read_movies_list_file(MOVIES_LIST_PATH)
-    draw_bar_chart(count_movies_by_a_director(movies), BAR_CHART_PATH)
+        draw_bar_chart(count_movies_by_a_director(movies), BAR_CHART_PATH)
+    elif '--file' in argv:
+        draw_bar_chart(count_movies_by_a_director(read_movies_list_file(MOVIES_LIST_PATH)), BAR_CHART_PATH)
+    else:
+        print('''IMDB Crawler
+flags:
+    --crawl:    crawl the website
+    --file:     use the file
+        ''')
+
+
+if __name__ == '__main__':
+    main()
