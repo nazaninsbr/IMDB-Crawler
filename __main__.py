@@ -160,11 +160,12 @@ def get_movie_actors(content):
 def crawl_the_website():
     movies = []
     content = 0
-    count = 1
+    count = 0
     actor_graph = ActorsGraph()
     count_not_found = 0
     while count < MAX_MOVIE_COUNT and count_not_found < MAX_UNAVAILABLE_COUNT:
-        print('Crawling...')
+        count += 1
+        print('Crawling...' + count)
         this_movie_url = change_movie_url(count, 'tt')
         content = get_page_content(MAIN_URL + this_movie_url + '/')
         if not content == -1:
@@ -180,7 +181,6 @@ def crawl_the_website():
             write_results_to_file(movies[-1].get_all_info())
         else:
             count_not_found += 1
-        count += 1
     return movies, actor_graph
 
 
