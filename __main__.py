@@ -63,7 +63,7 @@ class ActorsGraph:
                     if actor2 not in self.G:
                         self.G.add_node(actor2)
                     if self.nodes_connected(actor1, actor2):
-                        self.G[actor1][actor2]["weight"] += 1
+                        self.G[actor1][actor2]['weight'] += 1
                     else:
                         self.G.add_edge(actor1, actor2, weight=1)
 
@@ -89,14 +89,14 @@ class ActorsGraph:
         nx.draw_networkx_labels(self.G, pos, font_size=8, font_family='sans-serif')
 
         plt.axis('off')
-        plt.savefig("actors_graph.pdf")  # save as pdf
+        plt.savefig('actors_graph.pdf')  # save as pdf
         plt.show()  # display
 
 
 def get_page_content(url):
     r = requests.get(url)
     if not r.status_code == 200:
-        print("Problem accessing page data.")
+        print('Problem accessing page data.')
         return -1
     return r.text
 
@@ -106,8 +106,8 @@ def get_movie_name(content):
     all_h1 = soup.find_all('h1')
     title = [x for x in all_h1 if 'itemprop="name"' in str(x)]
     title = str(title[0])
-    title = title.split(">")
-    title = title[1].split("<")[0]
+    title = title.split('>')
+    title = title[1].split('<')[0]
     return title
 
 
@@ -117,8 +117,8 @@ def get_director_name(content):
     director = [x for x in all_spans if 'itemprop="director"' in str(x)]
     if len(director) == 0:
         return ''
-    director = str(director[0]).split(">")[-4]
-    director = director.split("<")[0]
+    director = str(director[0]).split('>')[-4]
+    director = director.split('<')[0]
     return director
 
 
@@ -164,7 +164,7 @@ def crawl_the_website():
     actor_graph = ActorsGraph()
     count_not_found = 0
     while count < MAX_MOVIE_COUNT and count_not_found < MAX_UNAVAILABLE_COUNT:
-        print("Crawling...")
+        print('Crawling...')
         this_movie_url = change_movie_url(count, 'tt')
         content = get_page_content(MAIN_URL + this_movie_url + '/')
         if not content == -1:
@@ -191,7 +191,7 @@ def read_the_file():
     thefile.close()
     for item in content:
         x = item.strip()
-        x = x.split("#")
+        x = x.split('#')
         y = Movie()
         y.set_all(x[0], x[-1])
         movies.append(y)
@@ -207,7 +207,7 @@ def draw_bar_chart(num_of_movies):
         x.append(item)
         y.append(num_of_movies[item])
     plt.bar(x, y)
-    plt.savefig("number_of_movies_for_each_director.pdf")
+    plt.savefig('number_of_movies_for_each_director.pdf')
     plt.show()
 
 
@@ -223,7 +223,7 @@ def number_of_movies_by_a_director(movies):
 
 
 if __name__ == '__main__':
-    choice = input("1. crawl the website 2. use the file (1/2) ")
+    choice = input('1. crawl the website 2. use the file (1/2) ')
     if choice == '1':
         movies, actor_graph = crawl_the_website()
         actor_graph.print_graph()
