@@ -1,15 +1,19 @@
 import requests
 from bs4 import BeautifulSoup 
 import matplotlib.pyplot as plt
+import copy
+import networkx as nx
 
 MAIN_URL = 'https://www.imdb.com/title/'
 FILENAME = 'movies.txt'
-
+MAX_MOVIE_COUNT = 100
+MAX_UNAVAILABLE_COUNT = 20
 
 class Movie:
 	def __init__(self):
 		self.title = ''
 		self.director = ''
+		self.actors = []
 
 	def setTitle(self, title):
 		self.title = title
@@ -26,6 +30,67 @@ class Movie:
 
 	def getDirector(self):
 		return self.director
+
+	def getTitle(self):
+		return self.title
+
+	def getActors(self):
+		return self.actors
+
+	def setActors(self, actors):
+		self.actors = copy.deepcopy(actors)
+
+
+class ActorsGraph:
+	def __init__(self):
+		self.G = nx.Graph()
+
+	def addEdge(self, actors):
+		if len(actors)<=1:
+			for actor in actors:
+				if actor not in self.G:
+					self.G.add_node(actor)
+			return
+		for actor1 in actors:
+			for actor2 in actors:
+				if not(actor1==actor2):
+					if actor1 not in self.G:
+						self.G.add_node(actor1)
+					if actor2 not in self.G:
+						self.G.add_node(actor2)
+					if self.nodes_connected(actor1, actor2) == True:
+						self.G[actor1][actor2]["weight"] += 1;
+					else:	
+						self.G.add_edge(actor1, actor2, weight=1)
+
+	def nodes_connected(self, u, v):
+		return u in self.G.neighbors(v)
+
+	def printGraph(self):
+		elarge=[(u,v) for (u,v,d) in self.G.edges(data=True) if d['weight'] >2]
+		esmall=[(u,v) for (u,v,d) in self.G.edges(data=True) if d['weight'] <=2]
+
+		pos=nx.spring_layout(self.G) # positions for all nodes
+
+		# nodes
+		nx.draw_networkx_nodes(self.G,pos,node_size=400)
+
+		# edges
+		nx.draw_networkx_edges(self.G,pos,edgelist=elarge,
+					width=3)
+		nx.draw_networkx_edges(self.G,pos,edgelist=esmall,
+					width=1,alpha=0.5,edge_color='b',style='dashed')
+		labels = nx.get_edge_attributes(self.G,'weight')
+		edge_labels=dict([((u,v,),d['weight']) for u,v,d in self.G.edges(data=True)])
+		nx.draw_networkx_edge_labels(self.G,pos,edge_labels=edge_labels)
+		# labels
+		nx.draw_networkx_labels(self.G,pos,font_size=8,font_family='sans-serif')
+
+		plt.axis('off')
+		plt.savefig("actors_graph.pdf") # save as pdf
+		plt.show() # display
+
+
 
 
 def getPageContent(url):
@@ -76,24 +141,43 @@ def writeResultsToFile(item):
 	thefile.write(item)
 	thefile.close()
 
+def getMovieActors(content):
+	soup = BeautifulSoup(content, 'html.parser')
+	AllTds = soup.find_all('td')
+	castTds = [x for x in AllTds if 'itemprop="actor"' in str(x)]
+	castSpan = [x.find_all('span') for x in castTds]
+	castNames = []
+	for item in castSpan:
+		for nestedItem in item:
+			castNames.append(nestedItem.text)
+	return castNames
+
+
 def crawlTheWebsite():
 	movies = []
 	content = 0
 	count = 1
-
-	while count<1000:
+	actorG = ActorsGraph()
+	countNotFound = 0
+	while count<MAX_MOVIE_COUNT and countNotFound<MAX_UNAVAILABLE_COUNT:
 		print("Crawling...")
 		thisMovieUrl = changeMovieURL(count, 'tt')
 		content = getPageContent(MAIN_URL+thisMovieUrl+'/')
 		if not content==-1:
+			countNotFound = 0
 			title = getMovieName(content)
 			director = getDirectorName(content)
+			actors = getMovieActors(content)
+			actorG.addEdge(actors)
 			thisMovie = Movie()
 			thisMovie.setAll(title, director)
+			thisMovie.setActors(actors)
 			movies.append(thisMovie)
 			writeResultsToFile(movies[-1].getAllInfo())
+		else:
+			countNotFound += 1
 		count += 1
-	return movies
+	return movies, actorG
 
 
 def readTheFile():
@@ -113,6 +197,8 @@ def drawBarChart(numOfMovies):
 	x = []
 	y = []
 	for item in numOfMovies.keys():
+		if item=='':
+			continue
 		x.append(item)
 		y.append(numOfMovies[item])
 	plt.bar(x, y)
@@ -133,7 +219,8 @@ def numberOfMoviesByADirector(movies):
 if __name__ == '__main__':
 	choice = input("1. crawl the website 2. use the file (1/2) ")
 	if choice=='1':
-		movies = crawlTheWebsite()
+		movies, actorG = crawlTheWebsite()
+		actorG.printGraph()
 	elif choice=='2':
 		movies = readTheFile()
 	numberOfMoviesByADirector(movies)
