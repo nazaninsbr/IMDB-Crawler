@@ -3,8 +3,9 @@
 import matplotlib.pyplot as plt
 
 from movie import Movie
-from crawler import crawl_the_website, MOVIES_LIST_PATH
+from crawler import Crawler
 
+MOVIES_LIST_PATH = 'movies.txt'
 BAR_CHART_PATH = 'number_of_movies_for_each_director.pdf'
 ACTORS_GRAPH_PATH = 'actors_graph.pdf'
 
@@ -50,7 +51,7 @@ def count_movies_by_a_director(movies):
 if __name__ == '__main__':
     choice = input('1. crawl the website 2. use the file (1/2) ')
     if choice == '1':
-        movies, actors_graph = crawl_the_website()
+        movies, actors_graph = Crawler(MOVIES_LIST_PATH).crawl_the_website()
         actors_graph.print_graph(ACTORS_GRAPH_PATH)
     elif choice == '2':
         movies = read_movies_list_file(MOVIES_LIST_PATH)
