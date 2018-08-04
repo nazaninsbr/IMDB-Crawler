@@ -180,6 +180,7 @@ def crawl_the_website():
             movies.append(this_movie)
             write_results_to_file(movies[-1].get_all_info())
         else:
+            count('Movie not found.')
             count_not_found += 1
     return movies, actor_graph
 
