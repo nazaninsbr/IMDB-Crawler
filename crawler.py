@@ -84,7 +84,10 @@ class Crawler(object):
 		for td in all_tds:
 			count +=1
 			divs = td.find_all('div')
-			percentage = divs[1].text
+			if len(divs)>=1:
+				percentage = divs[1].text
+			else:
+				percentage = '-'
 			if count%3==2:
 				percentage = percentage.replace(' ', '')
 				percentage = percentage.replace('\n', '')
