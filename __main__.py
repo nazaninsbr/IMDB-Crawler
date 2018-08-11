@@ -6,10 +6,12 @@ import matplotlib.pyplot as plt
 
 from movie import Movie
 from crawler import Crawler
+import general 
 
 MOVIES_LIST_PATH = 'movies.txt'
 BAR_CHART_PATH = 'number_of_movies_for_each_director.pdf'
 ACTORS_GRAPH_PATH = 'actors_graph.pdf'
+RATING_PATH = 'Rating/'
 
 
 def read_movies_list_file(path):
@@ -44,6 +46,13 @@ def count_movies_by_a_director(movies):
             num_of_movies[director] = 1
     return num_of_movies
 
+def readRatingsFromFiles():
+    filenames = general.getFilenamesInFolder(RATING_PATH)
+    file_content = []
+    for name in filenames:
+        content = general.readFile(name)
+        file_content.append(content)
+    return file_content
 
 def main():
     if '--crawl' in argv:
@@ -52,6 +61,7 @@ def main():
         draw_bar_chart(count_movies_by_a_director(movies), BAR_CHART_PATH)
     elif '--file' in argv:
         draw_bar_chart(count_movies_by_a_director(read_movies_list_file(MOVIES_LIST_PATH)), BAR_CHART_PATH)
+        ratings = readRatingsFromFiles()
     else:
         print('''IMDB Crawler
 flags:
