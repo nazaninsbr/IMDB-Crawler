@@ -4,14 +4,15 @@ import copy
 from rating import Rating 
 
 class Movie:
-    def __init__(self, title='', director='', actors=[], rating_information={}):
+    def __init__(self, title='', director='', language = '', actors=[], rating_information={}):
         self.title = title
         self.director = director
         self.actors = actors
         self.rating = Rating(rating_information)
+        self.language = language
 
     def __str__(self):
-        return self.title + '#' + self.director + '\n'
+        return self.title + '#' + self.director +'\n'
 
     @property
     def actors(self):
