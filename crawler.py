@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from actors_graph import ActorsGraph
 from movie import Movie
 
-DEFAULT_MAX_MOVIE_COUNT = 10010
+DEFAULT_MAX_MOVIE_COUNT = 100
 DEFAULT_MAX_UNAVAILABLE_COUNT = 20
 DEFAULT_RATING_FOLDER = 'Rating/'
 
@@ -192,7 +192,7 @@ class Crawler(object):
 
 	def crawl_the_website(self):
 		movies = []
-		count = 10000
+		count = 0
 		actors_graph = ActorsGraph()
 		count_not_found = 0
 		while count < self.max_movie_count and count_not_found < self.max_unavailable_count:
