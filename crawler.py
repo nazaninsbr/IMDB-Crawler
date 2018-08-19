@@ -203,6 +203,7 @@ class Crawler(object):
 				content = self.get_page_content(self.main_url + this_movie_url + '/')
 				count_not_found = 0
 				title = self.get_movie_name(content)
+				language = ''
 				# language = self.get_movie_language(content)
 				director = self.get_director_name(content)
 				actors = self.get_movie_actors(content)
