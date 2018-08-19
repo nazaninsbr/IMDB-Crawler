@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from actors_graph import ActorsGraph
 from movie import Movie
 
-DEFAULT_MAX_MOVIE_COUNT = 100
+DEFAULT_MAX_MOVIE_COUNT = 10
 DEFAULT_MAX_UNAVAILABLE_COUNT = 20
 DEFAULT_RATING_FOLDER = 'Rating/'
 
@@ -47,7 +47,14 @@ class Crawler(object):
 		title = [x for x in all_h1 if 'itemprop="name"' in str(x)]
 		if len(title)==0:
 			title = [x for x in all_h1 if 'id="titleYear"' in str(x)]
-		title = str(title[0]).split('>')[1].split('<')[0]
+			if len(title)==0:
+				all_div = soup.find_all('div')
+				title = [x for x in all_div if 'class="title_wrapper"' in str(x)]
+				title = title[0].find_all('h1')[0].text
+			else:
+				title = str(title[0]).split('>')[1].split('<')[0]
+		else:
+			title = str(title[0]).split('>')[1].split('<')[0]
 		print('Title: '+title)
 		return title
 
@@ -59,7 +66,10 @@ class Crawler(object):
 			all_as = soup.find_all('a')
 			director = [x for x in all_as if ('href="/name/nm' in str(x))]
 			# print('director:' + director[2].text)
-			director = director[2].text
+			if len(director)>=3:
+				director = director[2].text
+			else:
+				return ''
 		else:
 			director = str(director[0]).split('>')[-4].split('<')[0]
 		return director
@@ -172,19 +182,6 @@ class Crawler(object):
 		return self.get_rating_information(content)
 
 
-	def get_movie_language(self, content):
-		soup = BeautifulSoup(content, 'html.parser')
-		all_as = soup.find_all('a')
-		lang_as = [x for x in all_as if('href="/search/title?title_type=feature&primary_language="' in str(x) and "&sort=moviemeter,asc&ref_=tt_dt_dt" in str(x))]
-		if len(lang_as)==0:
-			return ''
-		else:
-			print(lang_as)
-			print(lang_as[0].text)
-			return lang_as[0].text	
-			exit()
-
-
 	def check_if_max_diff(self, us, non_us, title):
 		if abs(float(us)-float(non_us))>self.max_diff:
 			self.max_diff = abs(float(us)-float(non_us))
@@ -203,15 +200,13 @@ class Crawler(object):
 				content = self.get_page_content(self.main_url + this_movie_url + '/')
 				count_not_found = 0
 				title = self.get_movie_name(content)
-				language = ''
-				# language = self.get_movie_language(content)
 				director = self.get_director_name(content)
 				actors = self.get_movie_actors(content)
 				rating_information, consider_for_max_diff = self.all_rating_information(count)
 				if consider_for_max_diff==1:
 					self.check_if_max_diff(rating_information['us'], rating_information['non-us'], title)
 				actors_graph.add_edges(actors)
-				movies.append(Movie(title, director, language, actors, rating_information))
+				movies.append(Movie(title, director, actors, rating_information))
 				self.write_results_to_file(movies[-1])
 				self.write_rating_results_to_file(movies[-1])
 			except RuntimeError as e:
